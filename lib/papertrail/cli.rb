@@ -1,4 +1,4 @@
-require 'optparse'
+require 'slop'
 require 'yaml'
 require 'chronic'
 
@@ -12,68 +12,17 @@ module Papertrail
     attr_reader :options, :query_options, :connection
 
     def initialize
-      @options = {
-        :configfile => nil,
-        :delay  => 2,
-        :follow => false
-      }
-
-      @query_options = {}
-    end
-
-    def run
       # Let it slide if we have invalid JSON
       if JSON.respond_to?(:default_options)
         JSON.default_options[:check_utf8] = false
       end
+      @slop = parse_log_opts!
+      @options = load_configfile(@slop[:configfile]).merge(@slop.to_hash)
+      @connection = Papertrail::Connection.new(@options)
+      @query_options = {}
+    end
 
-      if configfile = find_configfile
-        configfile_options = load_configfile(configfile)
-        options.merge!(configfile_options)
-      end
-
-      OptionParser.new do |opts|
-        opts.banner = "papertrail - command-line tail and search for Papertrail log management service"
-
-        opts.on("-h", "--help", "Show usage") do |v|
-          puts opts
-          exit
-        end
-        opts.on("-f", "--follow", "Continue running and print new events (off)") do |v|
-          options[:follow] = true
-        end
-        opts.on("-d", "--delay SECONDS", "Delay between refresh (2)") do |v|
-          options[:delay] = v.to_i
-        end
-        opts.on("-c", "--configfile PATH", "Path to config (~/.papertrail.yml)") do |v|
-          options[:configfile] = File.expand_path(v)
-        end
-        opts.on("-s", "--system SYSTEM", "System to search") do |v|
-          options[:system] = v
-        end
-        opts.on("-g", "--group GROUP", "Group to search") do |v|
-          options[:group] = v
-        end
-        opts.on("-j", "--json", "Output raw json data") do |v|
-          options[:json] = true
-        end
-        opts.on("--min-time MIN", "Earliest time to search from.") do |v|
-          options[:min_time] = v
-        end
-        opts.on("--max-time MAX", "Latest time to search from.") do |v|
-          options[:max_time] = v
-        end
-
-        opts.separator usage
-      end.parse!
-
-      if options[:configfile]
-        configfile_options = load_configfile(options[:configfile])
-        options.merge!(configfile_options)
-      end
-
-      @connection = Papertrail::Connection.new(options)
-
+    def run
       if options[:system]
         query_options[:system_id] = connection.find_id_for_source(options[:system])
         unless query_options[:system_id]
@@ -154,13 +103,12 @@ module Papertrail
     end
 
 
+    private
+
+
     def usage
       <<-EOF
-
-  Usage: 
-    papertrail [-f] [-s system] [-g group] [-d seconds] [-c papertrail.yml] [-j] [--min-time mintime] [--max-time maxtime] [query]
-
-  Examples:
+Examples:
     papertrail -f
     papertrail something
     papertrail 1.2.3 Failure
@@ -168,10 +116,43 @@ module Papertrail
     papertrail -f "(www OR db) (nginx OR pgsql) -accepted"
     papertrail -f -g Production "(nginx OR pgsql) -accepted"
     papertrail -g Production --min-time 'yesterday at noon' --max-time 'today at 4am'
-
-  More: https://papertrailapp.com/
-
-  EOF
+More: https://papertrailapp.com/
+        EOF
     end
+
+    def get_default_configfile
+      paths = %w{.papertrail.yml ~/.papertrail.yml}.collect{|f| File.expand_path(f)}
+      default_path = paths[-1]
+      paths.each do |p|
+        return p if File.exists?(p)
+      end
+      default_path
+    end
+
+    def parse_log_opts!
+      config_file = get_default_configfile
+      usage_str   = usage
+      Slop.parse do
+        banner "papertrail - command-line tail and search for Papertrail log management service"
+
+        on :h, :help, "Show usage", default: false do
+          puts "\n#{self.help}\n\n#{usage_str}"
+          exit 0
+        end
+        on :f, :follow, "Continue running and print new events (off)", default: false
+        on :d, :delay=, "Delay in seconds between refresh (2)", as: :integer, default: 2
+        on :c, :configfile=, "Path to config (~/.papertrail.yml)", default: config_file
+        on :j, :json, "Output raw json data", default: false
+        on :s, :system=, "System to search"
+        on :g, :group=, "Group to search"
+        on 'min-time=', "Earliest time to search from" do |o|
+          fetch_option('min-time').value = Chronic.parse(o)
+        end
+        on 'max-time=', "Latest time to search from" do |o|
+          fetch_option('max-time').value = Chronic.parse(o)
+        end
+      end
+    end
+
   end
 end
