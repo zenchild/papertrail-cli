@@ -96,6 +96,18 @@ module Papertrail
       end
     end
 
+    def list_systems(*args)
+      parse_response @connection.get("systems.json")
+    end
+
+    def list_groups(*args)
+      parse_response @connection.get("groups.json")
+    end
+
+    def list_searches(*args)
+      parse_response @connection.get("searches.json")
+    end
+
     def register_source(name, *args)
       options = args.last.is_a?(Hash) ? args.pop.dup : {}
 
@@ -138,5 +150,17 @@ module Papertrail
     def query(query = nil, options = {})
       Papertrail::SearchQuery.new(self, query, options)
     end
+
+
+    private
+
+    def parse_response(response)
+      if response.success?
+        response.body
+      else
+        abort "Could not satisfy request. HTTP Status (#{response.status}), Body #{response.body}"
+      end
+    end
+
   end
 end

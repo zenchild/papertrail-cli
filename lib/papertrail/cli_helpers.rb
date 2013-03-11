@@ -32,5 +32,14 @@ module Papertrail
         raise(ArgumentError, "Could not parse time string '#{tstring}'")
     end
 
+    def display_listing(results, json = false)
+      if json
+        $stdout.puts results
+      else
+        $stdout.puts results.collect {|s| s['name']}.sort.join("\n")
+      end
+      $stdout.flush
+    end
+
   end
 end
