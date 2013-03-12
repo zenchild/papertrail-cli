@@ -63,6 +63,7 @@ More: https://papertrailapp.com/
 
         Cli::Lister.define_command('list-systems', op, banner: LIST_SYSTEMS_USAGE, configfile: config_file)
         Cli::Lister.define_command('list-groups', op, banner: LIST_GROUPS_USAGE, configfile: config_file)
+        Cli::AddGroup.add_command(op, configfile: config_file)
 
         op.on :f, :follow, "Continue running and print new events (off)", default: false
         op.on :d, :delay=, "Delay in seconds between refresh (2)", as: :integer, default: 2
@@ -86,4 +87,5 @@ More: https://papertrailapp.com/
 end
 
 require 'papertrail/cli/lister'
+require 'papertrail/cli/add_group'
 require 'papertrail/cli/log'

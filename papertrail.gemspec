@@ -70,19 +70,18 @@ Gem::Specification.new do |s|
     README.md
     Rakefile
     bin/papertrail
-    bin/papertrail-add-group
     bin/papertrail-add-system
     bin/papertrail-join-group
     bin/papertrail-remove-system
     examples/papertrail.yml.example
     lib/papertrail.rb
     lib/papertrail/cli.rb
-    lib/papertrail/cli_add_group.rb
     lib/papertrail/cli_add_system.rb
     lib/papertrail/cli_helpers.rb
     lib/papertrail/cli_join_group.rb
     lib/papertrail/cli_remove_system.rb
     lib/papertrail/cli/lister.rb
+    lib/papertrail/cli/add_group.rb
     lib/papertrail/cli/log.rb
     lib/papertrail/connection.rb
     lib/papertrail/event.rb
