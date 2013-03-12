@@ -1,13 +1,19 @@
+require 'papertrail/colorizer'
+require 'papertrail/log_regexp'
 class Papertrail::Cli::Log
   include Papertrail::CliHelpers
 
-  attr_reader :options, :args, :query_options, :connection
+  attr_reader :options, :args, :config, :query_options, :connection
 
   def initialize(options, args)
     @options = options
     @args = args
     @query_options = {}
-    @connection = Papertrail::Connection.new(load_configfile(@options[:configfile]))
+    @config = load_configfile @options[:configfile]
+    @connection = Papertrail::Connection.new(@config)
+    if colorize?
+      config_colors!
+    end
   end
 
   def run
@@ -24,6 +30,20 @@ class Papertrail::Cli::Log
 
   private
 
+  def colorize?
+    options[:colorize]
+  end
+
+  def config_colors!
+    default_regex = Papertrail::LogRegexp[:syslog]
+    if options['color-group'] && config[:colorizer][options['color-group']]
+      cgroup = config[:colorizer][options['color-group']]
+      regex = Papertrail::LogRegexp[cgroup[:type]]
+      colors = cgroup[:colors]
+    end
+    regex = regex || default_regex
+    @colorizer = Papertrail::Colorizer.new(regex, colors)
+  end
 
   def standard_query
     search_query = connection.query(query_string, query_options)
@@ -100,7 +120,8 @@ class Papertrail::Cli::Log
       $stdout.puts results.data.to_json
     else
       results.events.each do |event|
-        $stdout.puts event
+        evstr = colorize? ? @colorizer.colorize_message(event.to_s) : event.to_s
+        $stdout.puts evstr
       end
     end
 

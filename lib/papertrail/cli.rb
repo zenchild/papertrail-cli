@@ -65,11 +65,13 @@ More: https://papertrailapp.com/
         Cli::Lister.define_command('list-groups', op, banner: LIST_GROUPS_USAGE, configfile: config_file)
         Cli::AddGroup.add_command(op, configfile: config_file)
 
-        op.on :f, :follow, "Continue running and print new events (off)", default: false
+        op.on :colorize, "Whether or not to colorize events", default: false
+        op.on 'color-group=', 'Color group to use', as: :symbol
         op.on :d, :delay=, "Delay in seconds between refresh (2)", as: :integer, default: 2
+        op.on :f, :follow, "Continue running and print new events (off)", default: false
+        op.on :g, :group=, "Group to search"
         op.on :j, :json, "Output raw json data", default: false
         op.on :s, :system=, "System to search"
-        op.on :g, :group=, "Group to search"
         op.on 'min-time=', "Earliest time to search from" do |o|
           op.fetch_option('min-time').value = Chronic.parse(o)
         end

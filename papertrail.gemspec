@@ -80,11 +80,13 @@ Gem::Specification.new do |s|
     lib/papertrail/cli_helpers.rb
     lib/papertrail/cli_join_group.rb
     lib/papertrail/cli_remove_system.rb
-    lib/papertrail/cli/lister.rb
     lib/papertrail/cli/add_group.rb
+    lib/papertrail/cli/lister.rb
     lib/papertrail/cli/log.rb
+    lib/papertrail/colorizer.rb
     lib/papertrail/connection.rb
     lib/papertrail/event.rb
+    lib/papertrail/log_regexp.rb
     lib/papertrail/search_query.rb
     lib/papertrail/search_result.rb
     papertrail.gemspec
