@@ -1,19 +1,16 @@
-require 'papertrail/colorizer'
-require 'papertrail/log_regexp'
 class Papertrail::Cli::Log
   include Papertrail::CliHelpers
 
-  attr_reader :options, :args, :config, :query_options, :connection
+
+  attr_reader :options, :args, :config, :query_options, :connection, :logger
 
   def initialize(options, args)
     @options = options
     @args = args
     @query_options = {}
     @config = load_configfile @options[:configfile]
+    init_logger!
     @connection = Papertrail::Connection.new(@config)
-    if colorize?
-      config_colors!
-    end
   end
 
   def run
@@ -27,22 +24,33 @@ class Papertrail::Cli::Log
     end
   end
 
+  # Default logger
+  def display(results)
+    results.events.each do |event|
+      $stdout.puts event
+    end
+    $stdout.flush
+  end
+
 
   private
 
-  def colorize?
-    options[:colorize]
+  def init_logger!
+    if config[:logger]
+      require config[:logger_require] if config.has_key?(:logger_require)
+      klass = resolve_logger!
+      @logger = klass.new(config[:logger_config])
+    else
+      @logger = self
+    end
   end
 
-  def config_colors!
-    default_regex = Papertrail::LogRegexp[:syslog]
-    if options['color-group'] && config[:colorizer][options['color-group']]
-      cgroup = config[:colorizer][options['color-group']]
-      regex = Papertrail::LogRegexp[cgroup[:type]]
-      colors = cgroup[:colors]
+  def resolve_logger!
+    klass = Module
+    config[:logger].split(/::/).each do |c|
+      klass = klass.const_get(c)
     end
-    regex = regex || default_regex
-    @colorizer = Papertrail::Colorizer.new(regex, colors)
+    klass
   end
 
   def standard_query
@@ -118,14 +126,10 @@ class Papertrail::Cli::Log
   def display_results(results)
     if options[:json]
       $stdout.puts results.data.to_json
+      $stdout.flush
     else
-      results.events.each do |event|
-        evstr = colorize? ? @colorizer.colorize_message(event.to_s) : event.to_s
-        $stdout.puts evstr
-      end
+      logger.display(results)
     end
-
-    $stdout.flush
   end
 
 end
